@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "kotest-robolectric-extension"
+
+include("extension", "e2e-test")

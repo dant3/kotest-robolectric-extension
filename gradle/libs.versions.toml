@@ -2,10 +2,16 @@
 kotlinVersion = "2.3.20"
 kotestVersion = "6.1.9"
 robolectric = "4.16.1"
+junit4Version = "4.13.2"
+androidxTestCore = "1.6.1"
+agpVersion = "9.2.0"
+androidCompileSdk = "35"
+androidMinSdk = "21"
 detektVersion = "2.0.0-alpha.3"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }
+android-library = { id = "com.android.library", version.ref = "agpVersion" }
 detekt = { id = "dev.detekt", version.ref = "detektVersion" }
 
 [libraries]
@@ -13,5 +19,7 @@ kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", versio
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotestVersion" }
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotestVersion" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+junit4 = { module = "junit:junit", version.ref = "junit4Version" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 
 gradlePlugin-detekt-formatting = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detektVersion" }
