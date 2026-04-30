@@ -1,0 +1,17 @@
+[versions]
+kotlinVersion = "2.3.20"
+kotestVersion = "6.1.9"
+robolectric = "4.16.1"
+detektVersion = "2.0.0-alpha.3"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinVersion" }
+detekt = { id = "dev.detekt", version.ref = "detektVersion" }
+
+[libraries]
+kotest-framework-engine = { module = "io.kotest:kotest-framework-engine", version.ref = "kotestVersion" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotestVersion" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotestVersion" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+gradlePlugin-detekt-formatting = { module = "dev.detekt:detekt-rules-ktlint-wrapper", version.ref = "detektVersion" }
