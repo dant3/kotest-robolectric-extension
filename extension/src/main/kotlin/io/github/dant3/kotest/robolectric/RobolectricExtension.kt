@@ -12,21 +12,18 @@ public class RobolectricExtension :
     ConstructorExtension,
     TestCaseExtension {
 
-    private val runners: MutableMap<String, ContainedRobolectricRunner> = mutableMapOf()
+    private val runner: ContainedRobolectricRunner by lazy { ContainedRobolectricRunner() }
 
     override fun <T : Spec> instantiate(clazz: KClass<T>): Spec? {
         if (!clazz.hasRobolectricTest()) return null
-        val runner = obtainRunner(clazz)
         val bootstrapped = runner.sdkEnvironment.bootstrappedClass<Spec>(clazz.java)
         return bootstrapped.getDeclaredConstructor().newInstance()
     }
 
     override suspend fun intercept(testCase: TestCase, execute: suspend (TestCase) -> TestResult): TestResult {
-        val specClass = testCase.spec::class
-        if (!specClass.hasRobolectricTest()) {
+        if (!testCase.spec::class.hasRobolectricTest()) {
             return execute(testCase)
         }
-        val runner = obtainRunner(specClass)
         val previous = Thread.currentThread().contextClassLoader
         Thread.currentThread().contextClassLoader = runner.sdkEnvironment.robolectricClassLoader
         runner.containedBefore()
@@ -40,9 +37,6 @@ public class RobolectricExtension :
             }
         }
     }
-
-    private fun obtainRunner(clazz: KClass<*>): ContainedRobolectricRunner =
-        runners.getOrPut(clazz.qualifiedName ?: clazz.java.name) { ContainedRobolectricRunner() }
 
     private fun KClass<*>.hasRobolectricTest(): Boolean =
         annotations.any { it.annotationClass.qualifiedName == ROBOLECTRIC_TEST_FQN }
