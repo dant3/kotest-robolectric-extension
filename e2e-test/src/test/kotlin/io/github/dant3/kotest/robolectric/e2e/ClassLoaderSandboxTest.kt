@@ -9,15 +9,15 @@ import org.robolectric.internal.AndroidSandbox.SdkSandboxClassLoader
 @RobolectricTest
 class ClassLoaderSandboxTest :
     StringSpec({
-        "spec-класс загружен SdkSandboxClassLoader" {
+        "spec class is loaded by SdkSandboxClassLoader" {
             ClassLoaderSandboxTest::class.java.classLoader::class.java shouldBe SdkSandboxClassLoader::class.java
         }
 
-        "contextClassLoader потока — SdkSandboxClassLoader" {
+        "thread contextClassLoader is SdkSandboxClassLoader" {
             Thread.currentThread().contextClassLoader::class.java shouldBe SdkSandboxClassLoader::class.java
         }
 
-        "android.os.Build загружен внутри песочницы" {
+        "android.os.Build is loaded inside the sandbox" {
             android.os.Build::class.java.classLoader!!::class.java.name shouldContain "SandboxClassLoader"
         }
     })

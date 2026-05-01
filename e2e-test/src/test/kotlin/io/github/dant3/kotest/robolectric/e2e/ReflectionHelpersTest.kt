@@ -9,7 +9,7 @@ import org.robolectric.util.ReflectionHelpers
 @RobolectricTest
 class ReflectionHelpersTest :
     StringSpec({
-        "ReflectionHelpers.setStaticField обходит final-модификатор инструментированного класса" {
+        "ReflectionHelpers.setStaticField bypasses the final modifier on an instrumented class" {
             ReflectionHelpers.setStaticField(Build::class.java, "MODEL", "expected value")
             Build.MODEL shouldBe "expected value"
         }

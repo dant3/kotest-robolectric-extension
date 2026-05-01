@@ -9,11 +9,11 @@ import io.kotest.matchers.shouldNotBe
 @RobolectricTest
 class AndroidBuildTest :
     StringSpec({
-        "Build.VERSION.SDK_INT доступен внутри песочницы Robolectric" {
+        "Build.VERSION.SDK_INT is available inside the Robolectric sandbox" {
             Build.VERSION.SDK_INT shouldBeGreaterThanOrEqual 21
         }
 
-        "Build.MANUFACTURER доступен и не пустой" {
+        "Build.MANUFACTURER is available and not null" {
             Build.MANUFACTURER shouldNotBe null
         }
     })

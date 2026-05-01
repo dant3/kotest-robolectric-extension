@@ -10,7 +10,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [Build.VERSION_CODES.R])
 class ConfigSdkTest :
     StringSpec({
-        "@Config(sdk = R) применяет SDK 30" {
+        "@Config(sdk = R) applies SDK 30" {
             Build.VERSION.SDK_INT shouldBe Build.VERSION_CODES.R
         }
     })

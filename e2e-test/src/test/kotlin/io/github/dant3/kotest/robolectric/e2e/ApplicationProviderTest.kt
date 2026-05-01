@@ -11,13 +11,13 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 @RobolectricTest
 class ApplicationProviderTest :
     StringSpec({
-        "ApplicationProvider возвращает Application контекст" {
+        "ApplicationProvider returns an Application context" {
             val app = ApplicationProvider.getApplicationContext<Context>()
             app.shouldNotBeNull()
             app.shouldBeInstanceOf<Application>()
         }
 
-        "повторный вызов в том же spec возвращает тот же экземпляр Application" {
+        "repeated call in the same spec returns the same Application instance" {
             val first = ApplicationProvider.getApplicationContext<Application>()
             val second = ApplicationProvider.getApplicationContext<Application>()
             first.shouldNotBeNull()

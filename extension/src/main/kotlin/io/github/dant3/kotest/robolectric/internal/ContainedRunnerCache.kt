@@ -1,6 +1,7 @@
 package io.github.dant3.kotest.robolectric.internal
 
 import org.robolectric.annotation.Config
+import java.lang.reflect.Method
 
 internal class ContainedRunnerCache(private val maxSize: Int = DEFAULT_MAX_SIZE) {
 
@@ -81,19 +82,20 @@ internal data class ConfigKey(
                 fontScale = config.fontScale,
                 manifest = config.manifest,
                 qualifiers = config.qualifiers,
-                applicationFqn = applicationFqn(config),
+                applicationFqn = (APPLICATION_METHOD.invoke(config) as Class<*>).name,
                 shadowsFqns = shadowsFqns(config),
                 instrumentedPackages = config.instrumentedPackages.toList().sorted(),
             )
         }
 
-        private fun applicationFqn(config: Config): String =
-            (Config::class.java.getMethod("application").invoke(config) as Class<*>).name
-
         @Suppress("UNCHECKED_CAST")
         private fun shadowsFqns(config: Config): List<String> =
-            (Config::class.java.getMethod("shadows").invoke(config) as Array<Class<*>>)
-                .map { it.name }
-                .sorted()
+            (SHADOWS_METHOD.invoke(config) as Array<Class<*>>).map { it.name }.sorted()
+
+        // Reflection is required because Config.application returns Class<? extends android.app.Application>,
+        // and the Application class is not on the classpath of this pure-JVM module. Reflection bypasses
+        // Kotlin's compile-time type resolution.
+        private val APPLICATION_METHOD: Method = Config::class.java.getMethod("application")
+        private val SHADOWS_METHOD: Method = Config::class.java.getMethod("shadows")
     }
 }

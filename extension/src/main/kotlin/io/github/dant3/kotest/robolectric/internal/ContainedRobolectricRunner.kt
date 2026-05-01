@@ -42,18 +42,17 @@ internal class ContainedRobolectricRunner(config: Config?) :
     class PlaceholderTest {
         @Test
         fun bootstrap() {
-            // placeholder — служит только для получения FrameworkMethod, чтобы проинициализировать sandbox
+            // Placeholder used only to obtain a FrameworkMethod for sandbox initialization.
         }
     }
 
     private companion object {
         fun buildInjector(config: Config?): Injector {
-            val builder = defaultInjector()
-            if (config != null) {
-                val baseStrategy = defaultInjector().build().getInstance(ConfigurationStrategy::class.java)
-                builder.bind(ConfigurationStrategy::class.java, MergingConfigurationStrategy(baseStrategy, config))
-            }
-            return builder.build()
+            if (config == null) return defaultInjector().build()
+            val baseStrategy = defaultInjector().build().getInstance(ConfigurationStrategy::class.java)
+            return defaultInjector()
+                .bind(ConfigurationStrategy::class.java, MergingConfigurationStrategy(baseStrategy, config))
+                .build()
         }
     }
 
@@ -64,7 +63,9 @@ internal class ContainedRobolectricRunner(config: Config?) :
 
         override fun getConfig(testClass: Class<*>, method: Method?): ConfigurationStrategy.Configuration {
             val base = delegate.getConfig(testClass, method)
-            val baseConfig = base.get(Config::class.java) ?: Config.Builder.defaults().build()
+            val baseConfig = requireNotNull(base.get(Config::class.java)) {
+                "ConfigurationStrategy returned no Config — Robolectric default plugin chain not loaded?"
+            }
             val merged: Config = Config.Builder(baseConfig).overlay(userConfig).build()
             return MergedConfiguration(base, merged)
         }
@@ -75,13 +76,16 @@ internal class ContainedRobolectricRunner(config: Config?) :
         private val mergedConfig: Config,
     ) : ConfigurationStrategy.Configuration {
 
+        private val mergedMap: Map<Class<*>, Any> by lazy {
+            base.map().toMutableMap().also { it[Config::class.java] = mergedConfig }
+        }
+
         @Suppress("UNCHECKED_CAST")
         override fun <T : Any?> get(clazz: Class<T>): T? =
             if (clazz == Config::class.java) mergedConfig as T else base.get(clazz)
 
         override fun keySet(): Collection<Class<*>> = base.keySet()
 
-        override fun map(): Map<Class<*>, Any> =
-            base.map().toMutableMap().also { it[Config::class.java] = mergedConfig }
+        override fun map(): Map<Class<*>, Any> = mergedMap
     }
 }

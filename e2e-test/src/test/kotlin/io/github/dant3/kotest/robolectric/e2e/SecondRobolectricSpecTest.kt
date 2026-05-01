@@ -8,7 +8,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 @RobolectricTest
 class SecondRobolectricSpecTest :
     StringSpec({
-        "несколько spec с @RobolectricTest независимо инициализируют sandbox" {
+        "multiple specs with @RobolectricTest each initialize a sandbox" {
             Build.VERSION.SDK_INT shouldBeGreaterThanOrEqual 21
         }
     })

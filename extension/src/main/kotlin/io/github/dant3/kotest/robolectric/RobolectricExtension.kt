@@ -42,7 +42,7 @@ public class RobolectricExtension :
         annotations.any { it.annotationClass.qualifiedName == ROBOLECTRIC_TEST_FQN }
 
     private companion object {
-        private val ROBOLECTRIC_TEST_FQN: String = RobolectricTest::class.qualifiedName!!
-        private val sharedCache = ContainedRunnerCache()
+        val ROBOLECTRIC_TEST_FQN: String = RobolectricTest::class.qualifiedName!!
+        val sharedCache = ContainedRunnerCache()
     }
 }

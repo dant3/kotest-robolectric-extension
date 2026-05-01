@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldBe
 @RobolectricTest
 class MainThreadLooperTest :
     StringSpec({
-        "тест выполняется на main looper-потоке Robolectric" {
+        "test runs on Robolectric's main looper thread" {
             val mainLooper = Looper.getMainLooper()
             mainLooper.shouldNotBeNull()
             Thread.currentThread() shouldBe mainLooper.thread

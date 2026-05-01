@@ -11,7 +11,7 @@ class MultiSdkFailFastTest :
     StringSpec({
         val extension = RobolectricExtension()
 
-        "@Config(sdk = [array]) с несколькими версиями отклоняется" {
+        "@Config(sdk = [array]) with multiple versions is rejected" {
             val ex = shouldThrow<IllegalArgumentException> {
                 extension.instantiate(MultiSdkArraySpec::class)
             }
@@ -19,19 +19,19 @@ class MultiSdkFailFastTest :
             ex.message.shouldContain("TODO: support multi-sdk in the future")
         }
 
-        "@Config(minSdk, maxSdk) с диапазоном отклоняется" {
+        "@Config(minSdk, maxSdk) with a range is rejected" {
             shouldThrow<IllegalArgumentException> {
                 extension.instantiate(MultiSdkRangeSpec::class)
             }
         }
 
-        "@Config(sdk = [ALL_SDKS]) отклоняется" {
+        "@Config(sdk = [ALL_SDKS]) is rejected" {
             shouldThrow<IllegalArgumentException> {
                 extension.instantiate(MultiSdkAllSpec::class)
             }
         }
 
-        "@Config(minSdk) без maxSdk (open-ended) отклоняется" {
+        "@Config(minSdk) without maxSdk (open-ended) is rejected" {
             shouldThrow<IllegalArgumentException> {
                 extension.instantiate(MultiSdkOpenRangeSpec::class)
             }

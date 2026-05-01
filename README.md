@@ -1,18 +1,18 @@
 # kotest-robolectric-extension
 
-Расширение для [Kotest](https://kotest.io/), которое запускает JVM-тесты внутри песочницы [Robolectric](http://robolectric.org/), чтобы тестовый код мог обращаться к классам Android-фреймворка (`android.os.Build`, `android.content.Context` и т.д.) без эмулятора и физического устройства.
+A [Kotest](https://kotest.io/) extension that runs JVM tests inside a [Robolectric](http://robolectric.org/) sandbox, so test code can use Android framework classes (`android.os.Build`, `android.content.Context`, etc.) without an emulator or a physical device.
 
-## Референсные проекты
+## Reference projects
 
-- [kotest/kotest-extensions-robolectric](https://github.com/kotest/kotest-extensions-robolectric) — архивированный предшественник для Kotest 5.x
-- [apter-tech/junit5-robolectric-extension](https://github.com/apter-tech/junit5-robolectric-extension) — аналогичная задача, но для JUnit 5
-- [cusxy/electricspock](https://github.com/cusxy/electricspock) — аналог для Spock
+- [kotest/kotest-extensions-robolectric](https://github.com/kotest/kotest-extensions-robolectric) — archived predecessor for Kotest 5.x
+- [apter-tech/junit5-robolectric-extension](https://github.com/apter-tech/junit5-robolectric-extension) — same idea, but for JUnit 5
+- [cusxy/electricspock](https://github.com/cusxy/electricspock) — equivalent for Spock
 
-## Модули
+## Modules
 
-- `extension/` — сама библиотека (публикуемая)
-- `e2e-test/` — end-to-end тесты, проверяющие работу расширения на реальных Android-типах
+- `extension/` — the library itself (published)
+- `e2e-test/` — end-to-end tests that exercise the extension against real Android types
 
-## Лицензия
+## License
 
-Apache License 2.0 — см. [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](LICENSE).

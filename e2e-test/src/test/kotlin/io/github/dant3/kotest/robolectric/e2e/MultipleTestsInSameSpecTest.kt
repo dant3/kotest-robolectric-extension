@@ -10,17 +10,17 @@ import io.kotest.matchers.shouldBe
 @RobolectricTest
 class MultipleTestsInSameSpecTest :
     StringSpec({
-        "тест 1: SDK_INT доступен" {
+        "test 1: SDK_INT is available" {
             Build.VERSION.SDK_INT shouldBeGreaterThanOrEqual 21
         }
 
-        "тест 2: classloader не меняется между тестами одного spec" {
+        "test 2: classloader is stable across tests in the same spec" {
             val cl = Thread.currentThread().contextClassLoader
             cl.shouldNotBeNull()
             cl::class.java.simpleName shouldBe "SdkSandboxClassLoader"
         }
 
-        "тест 3: SDK_INT всё ещё доступен" {
+        "test 3: SDK_INT is still available" {
             Build.VERSION.SDK_INT shouldBeGreaterThanOrEqual 21
         }
     })

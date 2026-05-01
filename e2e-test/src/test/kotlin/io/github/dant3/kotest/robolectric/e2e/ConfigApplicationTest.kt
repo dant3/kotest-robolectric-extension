@@ -11,7 +11,7 @@ import org.robolectric.annotation.Config
 @Config(application = TestApplication::class)
 class ConfigApplicationTest :
     StringSpec({
-        "@Config(application = TestApplication::class) подменяет Application" {
+        "@Config(application = TestApplication::class) substitutes the Application instance" {
             val app = ApplicationProvider.getApplicationContext<Application>()
             app.shouldBeInstanceOf<TestApplication>()
         }

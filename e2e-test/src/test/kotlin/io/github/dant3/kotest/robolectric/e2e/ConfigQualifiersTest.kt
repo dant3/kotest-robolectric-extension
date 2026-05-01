@@ -11,7 +11,7 @@ import org.robolectric.annotation.Config
 @Config(qualifiers = "fr")
 class ConfigQualifiersTest :
     StringSpec({
-        "@Config(qualifiers = fr) применяет французскую локаль к ресурсам" {
+        "@Config(qualifiers = fr) applies the French locale to resources" {
             val app = ApplicationProvider.getApplicationContext<Application>()
             app.resources.configuration.locales[0].language shouldBe "fr"
         }
