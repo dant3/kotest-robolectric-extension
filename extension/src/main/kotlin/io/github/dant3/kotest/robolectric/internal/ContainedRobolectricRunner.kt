@@ -1,5 +1,6 @@
 package io.github.dant3.kotest.robolectric.internal
 
+import java.lang.reflect.Method
 import org.junit.Test
 import org.junit.runners.model.FrameworkMethod
 import org.robolectric.RobolectricTestRunner
@@ -7,11 +8,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.internal.bytecode.InstrumentationConfiguration
 import org.robolectric.pluginapi.config.ConfigurationStrategy
 import org.robolectric.util.inject.Injector
-import java.lang.reflect.Method
 
 internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PIN) :
     RobolectricTestRunner(PlaceholderTest::class.java, buildInjector(config, apiLevel)) {
-
     private val placeholderMethod: FrameworkMethod = children[0]
 
     val sdkEnvironment = getSandbox(placeholderMethod).also {
@@ -34,10 +33,17 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
         }
     }
 
-    override fun createClassLoaderConfig(method: FrameworkMethod): InstrumentationConfiguration =
-        InstrumentationConfiguration.Builder(super.createClassLoaderConfig(method))
+    override fun createClassLoaderConfig(method: FrameworkMethod): InstrumentationConfiguration {
+        // Public-API classes are pinned individually because doNotAcquirePackage uses prefix
+        // matching (`name.startsWith(prefix + ".")`) and would also catch user spec classes
+        // that happen to live under our top-level package.
+        val builder = InstrumentationConfiguration.Builder(super.createClassLoaderConfig(method))
             .doNotAcquirePackage("io.kotest")
-            .build()
+            .doNotAcquirePackage("io.github.dant3.kotest.robolectric.internal")
+            .doNotAcquirePackage("org.robolectric.annotation")
+        OUR_PUBLIC_CLASS_NAMES.forEach { builder.doNotAcquireClass(it) }
+        return builder.build()
+    }
 
     class PlaceholderTest {
         @Test
@@ -47,6 +53,14 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
     }
 
     internal companion object {
+        // Pinned public-API classes — must stay parent-loaded so the cache, runner registry
+        // and SDK bootstrap context can be shared across sandboxes.
+        private val OUR_PUBLIC_CLASS_NAMES = listOf(
+            "io.github.dant3.kotest.robolectric.RobolectricExtension",
+            "io.github.dant3.kotest.robolectric.RobolectricTest",
+            "io.github.dant3.kotest.robolectric.SdksKt",
+        )
+
         fun defaultInjectorBuilder(): Injector.Builder = defaultInjector()
 
         fun buildInjector(config: Config?, apiLevel: Int): Injector {
@@ -69,7 +83,6 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
         private val delegate: ConfigurationStrategy,
         private val userConfig: Config,
     ) : ConfigurationStrategy {
-
         override fun getConfig(testClass: Class<*>, method: Method?): ConfigurationStrategy.Configuration {
             val base = delegate.getConfig(testClass, method)
             val baseConfig = requireNotNull(base.get(Config::class.java)) {
@@ -84,7 +97,6 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
         private val base: ConfigurationStrategy.Configuration,
         private val mergedConfig: Config,
     ) : ConfigurationStrategy.Configuration {
-
         private val mergedMap: Map<Class<*>, Any> by lazy {
             base.map().toMutableMap().also { it[Config::class.java] = mergedConfig }
         }

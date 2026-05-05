@@ -1,10 +1,9 @@
 package io.github.dant3.kotest.robolectric.internal
 
-import org.robolectric.annotation.Config
 import java.lang.reflect.Method
+import org.robolectric.annotation.Config
 
 internal class ContainedRunnerCache(private val maxSize: Int = DEFAULT_MAX_SIZE) {
-
     private val map: MutableMap<ConfigKey, ContainedRobolectricRunner> = object :
         LinkedHashMap<ConfigKey, ContainedRobolectricRunner>(maxSize, LOAD_FACTOR, true) {
         override fun removeEldestEntry(eldest: Map.Entry<ConfigKey, ContainedRobolectricRunner>): Boolean =

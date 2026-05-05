@@ -860,7 +860,8 @@ style:
     RedundantHigherOrderMapUsage:
         active: true
     RedundantVisibilityModifierRule:
-        active: true
+        # incompatible with `explicitApi()` mode in our kotlin {} block
+        active: false
     ReturnCount:
         active: false
         max: 2
