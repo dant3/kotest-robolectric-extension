@@ -9,8 +9,8 @@ import org.robolectric.pluginapi.config.ConfigurationStrategy
 import org.robolectric.util.inject.Injector
 import java.lang.reflect.Method
 
-internal class ContainedRobolectricRunner(config: Config?) :
-    RobolectricTestRunner(PlaceholderTest::class.java, buildInjector(config)) {
+internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PIN) :
+    RobolectricTestRunner(PlaceholderTest::class.java, buildInjector(config, apiLevel)) {
 
     private val placeholderMethod: FrameworkMethod = children[0]
 
@@ -46,12 +46,21 @@ internal class ContainedRobolectricRunner(config: Config?) :
         }
     }
 
-    private companion object {
-        fun buildInjector(config: Config?): Injector {
-            if (config == null) return defaultInjector().build()
+    internal companion object {
+        fun defaultInjectorBuilder(): Injector.Builder = defaultInjector()
+
+        fun buildInjector(config: Config?, apiLevel: Int): Injector {
+            val pin = if (apiLevel != NO_PIN) Config.Builder().setSdk(apiLevel).build() else null
+            val effective = when {
+                config == null && pin == null -> null
+                config == null -> pin
+                pin == null -> config
+                else -> Config.Builder(config).overlay(pin).build()
+            }
+            if (effective == null) return defaultInjector().build()
             val baseStrategy = defaultInjector().build().getInstance(ConfigurationStrategy::class.java)
             return defaultInjector()
-                .bind(ConfigurationStrategy::class.java, MergingConfigurationStrategy(baseStrategy, config))
+                .bind(ConfigurationStrategy::class.java, MergingConfigurationStrategy(baseStrategy, effective))
                 .build()
         }
     }
