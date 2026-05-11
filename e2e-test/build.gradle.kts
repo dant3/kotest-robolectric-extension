@@ -27,6 +27,8 @@ dependencies {
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.koin.core)
+    testImplementation(libs.koin.test)
 
     detektPlugins(libs.gradlePlugin.detekt.formatting)
 }

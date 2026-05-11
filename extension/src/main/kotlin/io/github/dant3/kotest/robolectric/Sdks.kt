@@ -18,6 +18,8 @@ import org.robolectric.annotation.Config
  * sandbox, so SDK-dependent code (Build.VERSION.SDK_INT, version-specific shadows)
  * reflects the actual sandbox state. Test names are formed as `"$name [SDK $sdk]"`.
  *
+ * **Experimental:** the shape of this DSL may change. See [ExperimentalRobolectricKotestApi].
+ *
  * Example:
  * ```
  * withSdks("Build.VERSION reports", 23, 28, 30) { sdk ->
@@ -25,6 +27,7 @@ import org.robolectric.annotation.Config
  * }
  * ```
  */
+@ExperimentalRobolectricKotestApi
 public fun DslDrivenSpec.withSdks(name: String, vararg sdks: Int, test: suspend TestScope.(sdk: Int) -> Unit) {
     withSdks(sdks = sdks, nameFn = { "$name [SDK $it]" }, test = test)
 }
@@ -33,8 +36,11 @@ public fun DslDrivenSpec.withSdks(name: String, vararg sdks: Int, test: suspend 
  * Same as [withSdks] but with a custom naming function — useful when the per-SDK
  * test name does not fit the simple `prefix [SDK N]` form.
  *
+ * **Experimental:** the shape of this DSL may change. See [ExperimentalRobolectricKotestApi].
+ *
  * Example: `withSdks(23, 28, nameFn = { "level $it support" }) { sdk -> ... }`
  */
+@ExperimentalRobolectricKotestApi
 public fun DslDrivenSpec.withSdks(vararg sdks: Int, nameFn: (Int) -> String, test: suspend TestScope.(sdk: Int) -> Unit) {
     require(sdks.isNotEmpty()) { "withSdks requires at least one SDK" }
     val active = SdkBootstrapContext.currentSdk
@@ -92,6 +98,42 @@ private fun DslDrivenSpec.bootstrapAndAttachSdkTest(sdk: Int, classConfig: Confi
     add(perSdkRoot.copy(test = wrapWithSandbox(perSdkRoot.test, runner)))
 }
 
+/**
+ * Lifecycle contract for [withSdks]'s setup/teardown overload:
+ *
+ *  - If [setup] throws, [teardown] is NOT run (try-with-resources semantics: there is
+ *    nothing to clean up that was never set up).
+ *  - If [body] throws, [teardown] runs regardless, and the body's exception propagates.
+ *  - If both [body] and [teardown] throw, the body exception propagates with the
+ *    teardown failure attached as a suppressed exception.
+ *  - If [body] succeeds and [teardown] throws, the teardown failure propagates.
+ */
+@Suppress("ThrowingExceptionFromFinally") // try-with-resources-like contract documented above
+internal suspend fun runSetupTeardown(
+    setup: suspend () -> Unit,
+    teardown: suspend () -> Unit,
+    body: suspend () -> Unit,
+) {
+    setup()
+    var bodyError: Throwable? = null
+    try {
+        body()
+    } catch (t: Throwable) {
+        bodyError = t
+        throw t
+    } finally {
+        try {
+            teardown()
+        } catch (teardownError: Throwable) {
+            if (bodyError != null) {
+                bodyError.addSuppressed(teardownError)
+            } else {
+                throw teardownError
+            }
+        }
+    }
+}
+
 private fun wrapWithSandbox(
     inner: suspend TestScope.() -> Unit,
     runner: ContainedRobolectricRunner,
@@ -108,4 +150,125 @@ private fun wrapWithSandbox(
             Thread.currentThread().contextClassLoader = previous
         }
     }
+}
+
+/**
+ * Same as [withSdks] but runs [setup] before and [teardown] after each per-SDK invocation,
+ * **inside** the Robolectric sandbox lifecycle (after `containedBefore` and before
+ * `containedAfter`). Use this to bridge per-SDK lifecycle for DI frameworks or other
+ * global state that needs to be initialized fresh under each sandbox.
+ *
+ * The [setup] and [teardown] lambdas are captured during the recursive per-SDK bootstrap
+ * of the spec, so their class references resolve through the target SDK's sandbox
+ * classloader. This is what makes Koin / Hilt / similar frameworks "see" the correct
+ * SDK state.
+ *
+ * **Experimental:** the shape of this DSL may change. See [ExperimentalRobolectricKotestApi].
+ *
+ * Example (Koin):
+ * ```
+ * withSdks(
+ *     "service is available on each SDK", 23, 28, 30,
+ *     setup = { startKoin { modules(myModule) } },
+ *     teardown = { stopKoin() },
+ * ) { sdk ->
+ *     val service by inject<Service>()
+ *     service.doStuff()
+ * }
+ * ```
+ */
+@ExperimentalRobolectricKotestApi
+public fun DslDrivenSpec.withSdks(
+    name: String,
+    vararg sdks: Int,
+    setup: suspend () -> Unit,
+    teardown: suspend () -> Unit = {},
+    test: suspend TestScope.(sdk: Int) -> Unit,
+) {
+    withSdks(
+        sdks = sdks,
+        nameFn = { "$name [SDK $it]" },
+        setup = setup,
+        teardown = teardown,
+        test = test,
+    )
+}
+
+/**
+ * Same as the `name`-prefixed setup-aware [withSdks] but with a custom naming function.
+ *
+ * **Experimental:** the shape of this DSL may change. See [ExperimentalRobolectricKotestApi].
+ */
+@ExperimentalRobolectricKotestApi
+public fun DslDrivenSpec.withSdks(
+    vararg sdks: Int,
+    nameFn: (Int) -> String,
+    setup: suspend () -> Unit,
+    teardown: suspend () -> Unit = {},
+    test: suspend TestScope.(sdk: Int) -> Unit,
+) {
+    require(sdks.isNotEmpty()) { "withSdks requires at least one SDK" }
+    val active = SdkBootstrapContext.currentSdk
+    if (active != null) {
+        if (active in sdks) registerSingleSdkTestWithSetup(active, nameFn(active), setup, teardown, test)
+        return
+    }
+    val classConfig = this::class.java.getAnnotation(Config::class.java)
+    sdks.forEach { sdk -> bootstrapAndAttachSdkTestWithSetup(sdk, classConfig, nameFn) }
+}
+
+@OptIn(KotestInternal::class)
+private fun DslDrivenSpec.registerSingleSdkTestWithSetup(
+    sdk: Int,
+    name: String,
+    setup: suspend () -> Unit,
+    teardown: suspend () -> Unit,
+    test: suspend TestScope.(sdk: Int) -> Unit,
+) {
+    val body: suspend TestScope.() -> Unit = {
+        runSetupTeardown(setup, teardown) { test(sdk) }
+    }
+    add(
+        RootTest(
+            name = TestName(
+                name = name,
+                focus = false,
+                bang = false,
+                prefix = null,
+                suffix = null,
+                defaultAffixes = false,
+            ),
+            test = body,
+            type = TestType.Test,
+            source = SourceRef.ClassSource(this::class.java.name),
+            xmethod = TestXMethod.NONE,
+            config = null,
+            factoryId = null,
+        ),
+    )
+}
+
+@OptIn(KotestInternal::class)
+private fun DslDrivenSpec.bootstrapAndAttachSdkTestWithSetup(
+    sdk: Int,
+    classConfig: Config?,
+    nameFn: (Int) -> String,
+) {
+    val runner = SharedRunnerCache.get(classConfig, sdk)
+    val perSdkSpec = SdkBootstrapContext.withSdk(sdk) {
+        val originalClass = Class.forName(
+            this::class.java.name,
+            false,
+            SharedRunnerCache::class.java.classLoader,
+        )
+        val bootstrapped = runner.sdkEnvironment.bootstrappedClass<DslDrivenSpec>(originalClass)
+        bootstrapped.getDeclaredConstructor().newInstance()
+    }
+    val expectedName = nameFn(sdk)
+    val perSdkRoot = perSdkSpec.rootTests().lastOrNull { it.name.name == expectedName }
+        ?: error(
+            "Internal error: per-SDK bootstrap for SDK=$sdk produced no rootTest named " +
+                "'$expectedName'. This is a bug in kotest-robolectric-extension.",
+        )
+    add(perSdkRoot.copy(test = wrapWithSandbox(perSdkRoot.test, runner)))
 }

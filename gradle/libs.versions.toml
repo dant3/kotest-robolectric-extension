@@ -4,6 +4,7 @@ kotestVersion = "6.1.9"
 robolectric = "4.16.1"
 junit4Version = "4.13.2"
 androidxTestCore = "1.6.1"
+koinVersion = "4.2.1"
 agpVersion = "9.2.0"
 androidCompileSdk = "35"
 androidMinSdk = "21"
@@ -21,5 +22,7 @@ kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref 
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 junit4 = { module = "junit:junit", version.ref = "junit4Version" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koinVersion" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koinVersion" }
 
 gradlePlugin-detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detektVersion" }
