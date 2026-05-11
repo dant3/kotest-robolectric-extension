@@ -16,6 +16,13 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    // Pre-declare singleVariant so JitPack does not auto-inject its Groovy-syntax variant
+    // into this Kotlin DSL file. This module is not published; the block is here purely to
+    // keep JitPack's file modifier from corrupting the script.
+    publishing {
+        singleVariant("release") {}
+    }
 }
 
 kotlin {
