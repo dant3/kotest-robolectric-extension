@@ -3,6 +3,7 @@ package io.github.dant3.kotest.robolectric
 import io.github.dant3.kotest.robolectric.internal.ContainedRobolectricRunner
 import io.github.dant3.kotest.robolectric.internal.SdkBootstrapContext
 import io.github.dant3.kotest.robolectric.internal.SharedRunnerCache
+import io.github.dant3.kotest.robolectric.internal.SpecAnnotations
 import io.kotest.common.KotestInternal
 import io.kotest.core.names.TestName
 import io.kotest.core.source.SourceRef
@@ -48,7 +49,7 @@ public fun DslDrivenSpec.withSdks(vararg sdks: Int, nameFn: (Int) -> String, tes
         if (active in sdks) registerSingleSdkTest(active, nameFn(active), test)
         return
     }
-    val classConfig = this::class.java.getAnnotation(Config::class.java)
+    val classConfig = SpecAnnotations.config(this::class.java)
     sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, classConfig, nameFn) }
 }
 
@@ -213,7 +214,7 @@ public fun DslDrivenSpec.withSdks(
         if (active in sdks) registerSingleSdkTestWithSetup(active, nameFn(active), setup, teardown, test)
         return
     }
-    val classConfig = this::class.java.getAnnotation(Config::class.java)
+    val classConfig = SpecAnnotations.config(this::class.java)
     sdks.forEach { sdk -> bootstrapAndAttachSdkTestWithSetup(sdk, classConfig, nameFn) }
 }
 
