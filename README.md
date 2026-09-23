@@ -10,6 +10,7 @@ A [Kotest](https://kotest.io/) extension that runs JVM tests inside a [Robolectr
 
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [State between tests](#state-between-tests)
 - [Customizing the sandbox with `@Config`](#customizing-the-sandbox-with-config)
 - [Running across multiple SDKs *(experimental)*](#running-across-multiple-sdks-experimental)
 - [Per-SDK setup/teardown for DI frameworks *(experimental)*](#per-sdk-setupteardown-for-di-frameworks-experimental)
@@ -69,7 +70,57 @@ class BuildVersionTest : StringSpec({
 })
 ```
 
-All tests in the spec share the same sandbox (per-spec lifecycle), so state initialized in `containedBefore` (Application, Looper, resources) stays alive across tests in the same spec.
+All tests in the spec share the same sandbox (per-spec lifecycle), so the Application, Looper and resources stay alive across tests in the same spec. See [State between tests](#state-between-tests) if your tests need to be isolated from each other.
+
+## State between tests
+
+By default a spec gets **one** Robolectric test environment for all of its tests: whatever one test leaves in the Application (SharedPreferences, files, registered receivers, in-memory databases bound to the context) is visible to the next one. This differs from Robolectric under JUnit, where every test method starts with a fresh Application.
+
+### A fresh Application per test
+
+To get Robolectric's per-method behaviour, use one of Kotest's isolation modes. The extension sets up a fresh Robolectric test environment for every spec instance Kotest creates:
+
+```kotlin
+@RobolectricTest
+class RepositoryTest : FunSpec({
+    isolationMode = IsolationMode.InstancePerRoot // fresh Application per root test
+    // isolationMode = IsolationMode.InstancePerTest // ...or per test, containers included
+
+    test("starts clean") { /* ... */ }
+})
+```
+
+The sandbox classloader itself is still shared, so isolation costs a spec re-instantiation and an Application setup per test, not a new sandbox.
+
+### State Robolectric does not reset
+
+Static state that lives in the sandbox classloader survives **every** isolation mode, exactly as it does under JUnit: DI containers (Koin's `GlobalContext`), `WorkManager` initialized via `WorkManagerTestInitHelper`, databases held by such singletons, `Dispatchers.setMain`, and your own `object`s. Reset them around each test with a listener:
+
+```kotlin
+@RobolectricTest
+class RepositoryTest : FunSpec(), KoinTest {
+    // Not `by inject()`: the lazy delegate would keep the instance from the first graph.
+    private val repository: Repository get() = get()
+
+    init {
+        isolationMode = IsolationMode.InstancePerRoot
+
+        beforeTest {
+            stopKoin() // beforeTest also fires for containers, so the start must be idempotent
+            startKoin { modules(appModule) }
+        }
+        afterTest { stopKoin() }
+
+        test("starts with an empty repository") { /* ... */ }
+    }
+}
+```
+
+Things to watch for:
+
+- `beforeTest` / `afterTest` fire for containers as well as leaves, and some DSLs (e.g. `withData`) generate leaves that report themselves as containers. Keep the setup idempotent rather than filtering on `TestType`.
+- Listeners run in registration order. When the reset lives in a shared base spec, register it (e.g. with `extension(...)`) in the base class's `init` before the subclass body runs, so the subclass's own `beforeTest` already sees the fresh state.
+- `withSdks` already runs each iteration in its own test environment; use its [`setup` / `teardown`](#per-sdk-setupteardown-for-di-frameworks-experimental) for per-SDK DI.
 
 ## Customizing the sandbox with `@Config`
 
