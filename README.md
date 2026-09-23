@@ -50,7 +50,7 @@ The version slot accepts any of:
 
 The extension is built against Kotest 6.1 and is tested on both Kotest 6.1.x and 6.2.x.
 
-For the full release history and JitPack build status see https://jitpack.io/#dant3/kotest-robolectric-extension.
+See [CHANGELOG.md](CHANGELOG.md) for what changed between versions, including upgrade notes and known pitfalls. JitPack build status: https://jitpack.io/#dant3/kotest-robolectric-extension.
 
 ## Quick start
 
