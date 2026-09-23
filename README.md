@@ -18,7 +18,7 @@ A [Kotest](https://kotest.io/) extension that runs JVM tests inside a [Robolectr
 
 ## Installation
 
-The library is distributed via [JitPack](https://jitpack.io). Add the JitPack repository and the `extension` module as a test dependency.
+The library is distributed via [JitPack](https://jitpack.io). Add the JitPack repository and the library as a test dependency.
 
 **`settings.gradle.kts`**
 
@@ -36,7 +36,7 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    testImplementation("com.github.dant3.kotest-robolectric-extension:extension:1.0.0")
+    testImplementation("com.github.dant3:kotest-robolectric-extension:1.0.0")
     testImplementation("io.kotest:kotest-runner-junit5:<kotest-version>")
 }
 ```
