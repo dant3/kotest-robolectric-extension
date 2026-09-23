@@ -37,14 +37,14 @@ dependencyResolutionManagement {
 
 ```kotlin
 dependencies {
-    testImplementation("com.github.dant3:kotest-robolectric-extension:1.0.0")
+    testImplementation("com.github.dant3:kotest-robolectric-extension:1.1.0")
     testImplementation("io.kotest:kotest-runner-junit5:<kotest-version>")
 }
 ```
 
 The version slot accepts any of:
 
-- a release tag (e.g. `1.0.0`) — pinned, reproducible, recommended
+- a release tag (e.g. `1.1.0`) — pinned, reproducible, recommended
 - a short commit SHA (e.g. `abc1234`) — pinned to a specific commit
 - `main-SNAPSHOT` — latest commit on `main` (not recommended for CI)
 
