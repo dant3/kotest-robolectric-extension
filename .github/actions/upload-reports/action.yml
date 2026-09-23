@@ -1,0 +1,16 @@
+name: Upload reports
+description: Uploads test results and reports of all modules.
+inputs:
+  name:
+    description: Artifact name.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.name }}
+        path: |
+          */build/reports/
+          */build/test-results/
+        if-no-files-found: ignore

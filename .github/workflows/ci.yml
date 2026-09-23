@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: check (Kotest 6.1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: ./gradlew check
+      - uses: ./.github/actions/upload-reports
+        if: failure()
+        with:
+          name: reports-check
+
+  # The extension stays compiled against the Kotest version from libs.versions.toml;
+  # only the e2e runtime is swapped, which is how consumers on a newer Kotest use it.
+  kotest-compat:
+    name: e2e (Kotest ${{ matrix.kotest }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        kotest: ['6.2.5']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: ./gradlew :e2e-test:testDebugUnitTest -Pe2e.kotestVersion=${{ matrix.kotest }}
+      - uses: ./.github/actions/upload-reports
+        if: failure()
+        with:
+          name: reports-kotest-${{ matrix.kotest }}
+
+  # Single stable check for branch protection, so the matrix above can change freely.
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs: [check, kotest-compat]
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
