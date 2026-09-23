@@ -21,11 +21,25 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
         .bootstrappedClass<Any>(PlaceholderTest::class.java)
         .getMethod(PlaceholderTest::bootstrap.name)
 
+    // Lifecycles on one runner nest: under InstancePerRoot/InstancePerTest Kotest runs the pipeline
+    // of each fresh spec instance inside the seed instance's pipeline. Every level gets a fresh
+    // environment, and leaving an inner level sets up a fresh one for the enclosing level, so
+    // Android state is always live while any level is active.
+    private var depth = 0
+
     fun containedBefore() {
+        if (depth > 0) tearDown()
         beforeTest(sdkEnvironment, placeholderMethod, bootstrapMethod)
+        depth++
     }
 
     fun containedAfter() {
+        depth--
+        tearDown()
+        if (depth > 0) beforeTest(sdkEnvironment, placeholderMethod, bootstrapMethod)
+    }
+
+    private fun tearDown() {
         try {
             afterTest(placeholderMethod, bootstrapMethod)
         } finally {
