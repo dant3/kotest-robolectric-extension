@@ -46,16 +46,20 @@ public fun DslDrivenSpec.withSdks(vararg sdks: Int, nameFn: (Int) -> String, tes
     require(sdks.isNotEmpty()) { "withSdks requires at least one SDK" }
     val active = SdkBootstrapContext.currentSdk
     if (active != null) {
-        if (active in sdks) registerSingleSdkTest(active, nameFn(active), test)
+        if (active in sdks) captureSingleSdkTest(nameFn(active)) { test(active) }
         return
     }
     val classConfig = SpecAnnotations.config(this::class.java)
     sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, classConfig, nameFn) }
 }
 
+/**
+ * Called while the spec is being re-instantiated inside a per-SDK sandbox: hands the test,
+ * whose body was compiled against that sandbox's classes, to the bootstrapping caller.
+ */
 @OptIn(KotestInternal::class)
-private fun DslDrivenSpec.registerSingleSdkTest(sdk: Int, name: String, test: suspend TestScope.(sdk: Int) -> Unit) {
-    add(
+private fun DslDrivenSpec.captureSingleSdkTest(name: String, body: suspend TestScope.() -> Unit) {
+    SdkBootstrapContext.capture(
         RootTest(
             name = TestName(
                 name = name,
@@ -65,7 +69,7 @@ private fun DslDrivenSpec.registerSingleSdkTest(sdk: Int, name: String, test: su
                 suffix = null,
                 defaultAffixes = false,
             ),
-            test = { test(sdk) },
+            test = body,
             type = TestType.Test,
             source = SourceRef.ClassSource(this::class.java.name),
             xmethod = TestXMethod.NONE,
@@ -78,7 +82,7 @@ private fun DslDrivenSpec.registerSingleSdkTest(sdk: Int, name: String, test: su
 @OptIn(KotestInternal::class)
 private fun DslDrivenSpec.bootstrapAndAttachSdkTest(sdk: Int, classConfig: Config?, nameFn: (Int) -> String) {
     val runner = SharedRunnerCache.get(classConfig, sdk)
-    val perSdkSpec = SdkBootstrapContext.withSdk(sdk) {
+    val captured = SdkBootstrapContext.withSdk(sdk) {
         // Spec class is re-bootstrapped under this SDK's sandbox so the lambda captured
         // inside the spec body resolves Android references through the sandbox classloader
         // (Build.VERSION.SDK_INT, shadows, etc.).
@@ -91,7 +95,7 @@ private fun DslDrivenSpec.bootstrapAndAttachSdkTest(sdk: Int, classConfig: Confi
         bootstrapped.getDeclaredConstructor().newInstance()
     }
     val expectedName = nameFn(sdk)
-    val perSdkRoot = perSdkSpec.rootTests().lastOrNull { it.name.name == expectedName }
+    val perSdkRoot = captured.lastOrNull { it.name.name == expectedName }
         ?: error(
             "Internal error: per-SDK bootstrap for SDK=$sdk produced no rootTest named " +
                 "'$expectedName'. This is a bug in kotest-robolectric-extension.",
@@ -211,65 +215,11 @@ public fun DslDrivenSpec.withSdks(
     require(sdks.isNotEmpty()) { "withSdks requires at least one SDK" }
     val active = SdkBootstrapContext.currentSdk
     if (active != null) {
-        if (active in sdks) registerSingleSdkTestWithSetup(active, nameFn(active), setup, teardown, test)
+        if (active in sdks) {
+            captureSingleSdkTest(nameFn(active)) { runSetupTeardown(setup, teardown) { test(active) } }
+        }
         return
     }
     val classConfig = SpecAnnotations.config(this::class.java)
-    sdks.forEach { sdk -> bootstrapAndAttachSdkTestWithSetup(sdk, classConfig, nameFn) }
-}
-
-@OptIn(KotestInternal::class)
-private fun DslDrivenSpec.registerSingleSdkTestWithSetup(
-    sdk: Int,
-    name: String,
-    setup: suspend () -> Unit,
-    teardown: suspend () -> Unit,
-    test: suspend TestScope.(sdk: Int) -> Unit,
-) {
-    val body: suspend TestScope.() -> Unit = {
-        runSetupTeardown(setup, teardown) { test(sdk) }
-    }
-    add(
-        RootTest(
-            name = TestName(
-                name = name,
-                focus = false,
-                bang = false,
-                prefix = null,
-                suffix = null,
-                defaultAffixes = false,
-            ),
-            test = body,
-            type = TestType.Test,
-            source = SourceRef.ClassSource(this::class.java.name),
-            xmethod = TestXMethod.NONE,
-            config = null,
-            factoryId = null,
-        ),
-    )
-}
-
-@OptIn(KotestInternal::class)
-private fun DslDrivenSpec.bootstrapAndAttachSdkTestWithSetup(
-    sdk: Int,
-    classConfig: Config?,
-    nameFn: (Int) -> String,
-) {
-    val runner = SharedRunnerCache.get(classConfig, sdk)
-    val perSdkSpec = SdkBootstrapContext.withSdk(sdk) {
-        val originalClass = Class.forName(
-            this::class.java.name,
-            false,
-            SharedRunnerCache::class.java.classLoader,
-        )
-        val bootstrapped = runner.sdkEnvironment.bootstrappedClass<DslDrivenSpec>(originalClass)
-        bootstrapped.getDeclaredConstructor().newInstance()
-    }
-    val expectedName = nameFn(sdk)
-    val perSdkRoot = perSdkSpec.rootTests().lastOrNull { it.name.name == expectedName }
-        ?: error(
-            "Internal error: per-SDK bootstrap for SDK=$sdk produced no rootTest named " +
-                "'$expectedName'. This is a bug in kotest-robolectric-extension.",
-        )
-    add(perSdkRoot.copy(test = wrapWithSandbox(perSdkRoot.test, runner)))
+    sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, classConfig, nameFn) }
 }

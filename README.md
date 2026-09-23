@@ -1,7 +1,7 @@
 # kotest-robolectric-extension
 
 [![JitPack](https://jitpack.io/v/dant3/kotest-robolectric-extension.svg)](https://jitpack.io/#dant3/kotest-robolectric-extension)
-[![Kotest](https://img.shields.io/badge/Kotest-6.1.9-blue?logo=kotlin)](https://kotest.io/)
+[![Kotest](https://img.shields.io/badge/Kotest-6.1%20%7C%206.2-blue?logo=kotlin)](https://kotest.io/)
 [![Robolectric](https://img.shields.io/badge/Robolectric-4.16.1-green?logo=android)](http://robolectric.org/)
 
 A [Kotest](https://kotest.io/) extension that runs JVM tests inside a [Robolectric](http://robolectric.org/) sandbox so test code can use Android framework classes (`android.os.Build`, `android.content.Context`, etc.) without an emulator or a physical device.
@@ -46,6 +46,8 @@ The version slot accepts any of:
 - a release tag (e.g. `1.0.0`) — pinned, reproducible, recommended
 - a short commit SHA (e.g. `abc1234`) — pinned to a specific commit
 - `main-SNAPSHOT` — latest commit on `main` (not recommended for CI)
+
+The extension is built against Kotest 6.1 and is tested on both Kotest 6.1.x and 6.2.x.
 
 For the full release history and JitPack build status see https://jitpack.io/#dant3/kotest-robolectric-extension.
 

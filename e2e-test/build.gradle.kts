@@ -52,3 +52,13 @@ tasks.withType<Test>().configureEach {
         showStandardStreams = true
     }
 }
+
+// Runs the e2e suite against a different Kotest runtime than the extension is compiled with,
+// e.g. `./gradlew :e2e-test:testDebugUnitTest -Pe2e.kotestVersion=6.2.5`.
+providers.gradleProperty("e2e.kotestVersion").orNull?.let { kotestVersion ->
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "io.kotest") useVersion(kotestVersion)
+        }
+    }
+}
