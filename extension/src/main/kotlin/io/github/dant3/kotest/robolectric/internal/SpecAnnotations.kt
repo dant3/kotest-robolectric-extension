@@ -19,4 +19,10 @@ internal object SpecAnnotations {
         .toList()
         .reversed()
         .reduceOrNull { base, overlay -> Config.Builder(base).overlay(overlay).build() }
+
+    fun configuration(specClass: Class<*>): SpecConfiguration =
+        SpecConfiguration(config(specClass), ContainedRobolectricRunner.modesOf(specClass))
 }
+
+/** What a spec asks of its sandbox: its merged `@Config`, and the modes its other Robolectric annotations select. */
+internal data class SpecConfiguration(val config: Config?, val modes: Map<Class<*>, Any>)

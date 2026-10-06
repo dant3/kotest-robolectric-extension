@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.1
+
+### Fixed
+
+- Robolectric annotations on a spec other than `@Config` — `@GraphicsMode`, `@LooperMode`, `@SQLiteMode` and the rest — were ignored without a word: the sandbox was configured for an internal placeholder class that carries none of them. A spec annotated `@GraphicsMode(NATIVE)` still ran in the legacy mode, so a `Canvas` drew nothing and a rendering assertion could pass on two blank bitmaps. They are now read from the spec class, its superclasses and its package, as Robolectric reads them under JUnit.
+- Specs with the same `@Config` but different modes shared one sandbox. Each combination now gets its own.
+
+### Behavior changes compared to 1.1.0
+
+A spec that already carried such an annotation now runs in the mode it asks for. A test that passed only because the annotation was ignored — most likely a rendering check that compared two empty bitmaps — may start failing, which is the bug surfacing rather than a new one.
+
 ## 1.1.0
 
 This release makes the extension usable for larger test suites. You can now choose how isolated tests are from each other, put `@RobolectricTest` / `@Config` on a shared base spec, and run on Kotest 6.2. It also fixes the dependency coordinates, which never resolved in 1.0.0.
