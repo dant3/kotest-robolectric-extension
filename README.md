@@ -156,6 +156,20 @@ class CustomApplicationTest : StringSpec({
 
 Class-level `@Config` must pin a **single** SDK — multi-SDK values (`sdk = [21, 28]`, `sdk = [Config.ALL_SDKS]`, `minSdk`/`maxSdk` ranges) are rejected with `IllegalArgumentException` that points to the `withSdks` DSL described below.
 
+The other sandbox annotations — `@GraphicsMode`, `@LooperMode`, `@SQLiteMode` and the rest of what Robolectric's configurers read — are honoured the same way, from the spec class, its superclasses and its package. For example, real drawing into a `Bitmap` needs the native graphics mode:
+
+```kotlin
+@RobolectricTest
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class RenderingTest : StringSpec({
+    "a canvas draws into the bitmap" {
+        val bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        Canvas(bitmap).drawColor(Color.RED)
+        bitmap.getPixel(0, 0) shouldBe Color.RED
+    }
+})
+```
+
 ## Running across multiple SDKs *(experimental)*
 
 > The `withSdks` DSL is annotated with `@ExperimentalRobolectricKotestApi` and requires opt-in via `@OptIn(ExperimentalRobolectricKotestApi::class)` on the spec class or the consuming code. Its shape may change between minor releases.

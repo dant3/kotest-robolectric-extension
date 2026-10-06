@@ -11,9 +11,9 @@ internal class ContainedRunnerCache(private val maxSize: Int = DEFAULT_MAX_SIZE)
     }
 
     @Synchronized
-    fun get(config: Config?, apiLevel: Int = NO_PIN): ContainedRobolectricRunner {
-        val key = ConfigKey.from(config, apiLevel)
-        return map.getOrPut(key) { ContainedRobolectricRunner(config, apiLevel) }
+    fun get(spec: SpecConfiguration, apiLevel: Int = NO_PIN): ContainedRobolectricRunner {
+        val key = ConfigKey.from(spec, apiLevel)
+        return map.getOrPut(key) { ContainedRobolectricRunner(spec, apiLevel) }
     }
 
     private companion object {
@@ -35,6 +35,8 @@ internal data class ConfigKey(
     val applicationFqn: String,
     val shadowsFqns: List<String>,
     val instrumentedPackages: List<String>,
+    // A sandbox is built per graphics, looper and SQLite mode, so specs differing only there need runners of their own.
+    val modes: Map<String, String> = emptyMap(),
 ) {
     companion object {
         private val DEFAULT = ConfigKey(
@@ -50,7 +52,10 @@ internal data class ConfigKey(
             instrumentedPackages = emptyList(),
         )
 
-        fun from(config: Config?, apiLevel: Int): ConfigKey {
+        fun from(spec: SpecConfiguration, apiLevel: Int): ConfigKey =
+            from(spec.config, apiLevel).copy(modes = spec.modes.entries.associate { (type, mode) -> type.name to "$mode" })
+
+        private fun from(config: Config?, apiLevel: Int): ConfigKey {
             if (config == null) return DEFAULT.copy(pinnedApiLevel = apiLevel)
             return ConfigKey(
                 sdk = config.sdk.toList(),

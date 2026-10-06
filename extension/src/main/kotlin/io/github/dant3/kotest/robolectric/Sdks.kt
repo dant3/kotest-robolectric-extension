@@ -4,6 +4,7 @@ import io.github.dant3.kotest.robolectric.internal.ContainedRobolectricRunner
 import io.github.dant3.kotest.robolectric.internal.SdkBootstrapContext
 import io.github.dant3.kotest.robolectric.internal.SharedRunnerCache
 import io.github.dant3.kotest.robolectric.internal.SpecAnnotations
+import io.github.dant3.kotest.robolectric.internal.SpecConfiguration
 import io.kotest.common.KotestInternal
 import io.kotest.core.names.TestName
 import io.kotest.core.source.SourceRef
@@ -12,7 +13,6 @@ import io.kotest.core.spec.RootTest
 import io.kotest.core.spec.style.TestXMethod
 import io.kotest.core.test.TestScope
 import io.kotest.core.test.TestType
-import org.robolectric.annotation.Config
 
 /**
  * Register one root test per SDK level. Each test runs inside its own Robolectric
@@ -49,8 +49,8 @@ public fun DslDrivenSpec.withSdks(vararg sdks: Int, nameFn: (Int) -> String, tes
         if (active in sdks) captureSingleSdkTest(nameFn(active)) { test(active) }
         return
     }
-    val classConfig = SpecAnnotations.config(this::class.java)
-    sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, classConfig, nameFn) }
+    val spec = SpecAnnotations.configuration(this::class.java)
+    sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, spec, nameFn) }
 }
 
 /**
@@ -80,8 +80,8 @@ private fun DslDrivenSpec.captureSingleSdkTest(name: String, body: suspend TestS
 }
 
 @OptIn(KotestInternal::class)
-private fun DslDrivenSpec.bootstrapAndAttachSdkTest(sdk: Int, classConfig: Config?, nameFn: (Int) -> String) {
-    val runner = SharedRunnerCache.get(classConfig, sdk)
+private fun DslDrivenSpec.bootstrapAndAttachSdkTest(sdk: Int, spec: SpecConfiguration, nameFn: (Int) -> String) {
+    val runner = SharedRunnerCache.get(spec, sdk)
     val captured = SdkBootstrapContext.withSdk(sdk) {
         // Spec class is re-bootstrapped under this SDK's sandbox so the lambda captured
         // inside the spec body resolves Android references through the sandbox classloader
@@ -220,6 +220,6 @@ public fun DslDrivenSpec.withSdks(
         }
         return
     }
-    val classConfig = SpecAnnotations.config(this::class.java)
-    sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, classConfig, nameFn) }
+    val spec = SpecAnnotations.configuration(this::class.java)
+    sdks.forEach { sdk -> bootstrapAndAttachSdkTest(sdk, spec, nameFn) }
 }

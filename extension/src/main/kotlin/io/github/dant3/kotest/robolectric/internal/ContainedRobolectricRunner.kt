@@ -9,8 +9,8 @@ import org.robolectric.internal.bytecode.InstrumentationConfiguration
 import org.robolectric.pluginapi.config.ConfigurationStrategy
 import org.robolectric.util.inject.Injector
 
-internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PIN) :
-    RobolectricTestRunner(PlaceholderTest::class.java, buildInjector(config, apiLevel)) {
+internal class ContainedRobolectricRunner(spec: SpecConfiguration, apiLevel: Int = NO_PIN) :
+    RobolectricTestRunner(PlaceholderTest::class.java, buildInjector(spec, apiLevel)) {
     private val placeholderMethod: FrameworkMethod = children[0]
 
     val sdkEnvironment = getSandbox(placeholderMethod).also {
@@ -77,50 +77,56 @@ internal class ContainedRobolectricRunner(config: Config?, apiLevel: Int = NO_PI
 
         fun defaultInjectorBuilder(): Injector.Builder = defaultInjector()
 
-        fun buildInjector(config: Config?, apiLevel: Int): Injector {
+        private val defaultStrategy: ConfigurationStrategy by lazy {
+            defaultInjector().build().getInstance(ConfigurationStrategy::class.java)
+        }
+
+        private val placeholderMethod: Method = PlaceholderTest::class.java.getMethod(PlaceholderTest::bootstrap.name)
+
+        /**
+         * Everything Robolectric's configurers resolve for [specClass] besides `@Config` — `@GraphicsMode`,
+         * `@LooperMode`, `@SQLiteMode` and the rest, from the spec, its supertypes, its package and the system
+         * properties. The sandbox is built for [PlaceholderTest], which carries none of them, so without this
+         * every such annotation on a spec would be ignored without a word.
+         */
+        fun modesOf(specClass: Class<*>): Map<Class<*>, Any> =
+            defaultStrategy.getConfig(specClass, placeholderMethod).map().filterKeys { it != Config::class.java }
+
+        fun buildInjector(spec: SpecConfiguration, apiLevel: Int): Injector {
             val pin = if (apiLevel != NO_PIN) Config.Builder().setSdk(apiLevel).build() else null
             val effective = when {
-                config == null && pin == null -> null
-                config == null -> pin
-                pin == null -> config
-                else -> Config.Builder(config).overlay(pin).build()
+                spec.config == null -> pin
+                pin == null -> spec.config
+                else -> Config.Builder(spec.config).overlay(pin).build()
             }
-            if (effective == null) return defaultInjector().build()
-            val baseStrategy = defaultInjector().build().getInstance(ConfigurationStrategy::class.java)
             return defaultInjector()
-                .bind(ConfigurationStrategy::class.java, MergingConfigurationStrategy(baseStrategy, effective))
+                .bind(ConfigurationStrategy::class.java, SpecConfigurationStrategy(defaultStrategy, effective, spec.modes))
                 .build()
         }
     }
 
-    private class MergingConfigurationStrategy(
+    /** Resolves the placeholder's configuration, then lays the spec's own `@Config` and modes over it. */
+    private class SpecConfigurationStrategy(
         private val delegate: ConfigurationStrategy,
-        private val userConfig: Config,
+        private val userConfig: Config?,
+        private val modes: Map<Class<*>, Any>,
     ) : ConfigurationStrategy {
         override fun getConfig(testClass: Class<*>, method: Method?): ConfigurationStrategy.Configuration {
             val base = delegate.getConfig(testClass, method)
             val baseConfig = requireNotNull(base.get(Config::class.java)) {
                 "ConfigurationStrategy returned no Config — Robolectric default plugin chain not loaded?"
             }
-            val merged: Config = Config.Builder(baseConfig).overlay(userConfig).build()
-            return MergedConfiguration(base, merged)
+            val merged = if (userConfig == null) baseConfig else Config.Builder(baseConfig).overlay(userConfig).build()
+            return SpecConfigurationResult(base.map() + modes + (Config::class.java to merged))
         }
     }
 
-    private class MergedConfiguration(
-        private val base: ConfigurationStrategy.Configuration,
-        private val mergedConfig: Config,
-    ) : ConfigurationStrategy.Configuration {
-        private val mergedMap: Map<Class<*>, Any> by lazy {
-            base.map().toMutableMap().also { it[Config::class.java] = mergedConfig }
-        }
+    private class SpecConfigurationResult(private val values: Map<Class<*>, Any>) : ConfigurationStrategy.Configuration {
+        @Suppress("UNCHECKED_CAST") // keyed by the class of its own value, as Configuration.map() is
+        override fun <T : Any?> get(clazz: Class<T>): T? = values[clazz] as T?
 
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : Any?> get(clazz: Class<T>): T? =
-            if (clazz == Config::class.java) mergedConfig as T else base.get(clazz)
+        override fun keySet(): Collection<Class<*>> = values.keys
 
-        override fun keySet(): Collection<Class<*>> = base.keySet()
-
-        override fun map(): Map<Class<*>, Any> = mergedMap
+        override fun map(): Map<Class<*>, Any> = values
     }
 }

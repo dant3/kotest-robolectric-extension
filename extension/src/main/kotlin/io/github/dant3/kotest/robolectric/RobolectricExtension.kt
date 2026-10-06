@@ -13,9 +13,9 @@ public class RobolectricExtension :
     SpecExtension {
     override fun <T : Spec> instantiate(clazz: KClass<T>): Spec? {
         if (!SpecAnnotations.hasRobolectricTest(clazz)) return null
-        val config = SpecAnnotations.config(clazz.java)
-        MultiSdkErrors.checkClassLevelSingleSdk(clazz.java, config)
-        val runner = SharedRunnerCache.get(config)
+        val spec = SpecAnnotations.configuration(clazz.java)
+        MultiSdkErrors.checkClassLevelSingleSdk(clazz.java, spec.config)
+        val runner = SharedRunnerCache.get(spec)
         val bootstrapped = runner.sdkEnvironment.bootstrappedClass<Spec>(clazz.java)
         return bootstrapped.getDeclaredConstructor().newInstance()
     }
@@ -25,7 +25,7 @@ public class RobolectricExtension :
             execute(spec)
             return
         }
-        val runner = SharedRunnerCache.get(SpecAnnotations.config(spec::class.java))
+        val runner = SharedRunnerCache.get(SpecAnnotations.configuration(spec::class.java))
         val previous = Thread.currentThread().contextClassLoader
         Thread.currentThread().contextClassLoader = runner.sdkEnvironment.robolectricClassLoader
         runner.containedBefore()
